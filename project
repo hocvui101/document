@@ -1,0 +1,251 @@
+Directory Structure
+.
+├── confluence
+│   ├── atlassian-agent.jar
+│   └── Dockerfile
+├── data
+│   ├── confluence
+│   │   ├── logs
+│   │   └── var
+│   ├── jira
+│   │   ├── logs
+│   │   └── var
+│   └── mysql
+│       ├── backup
+│       ├── conf.d
+│       │   └── my.cnf
+│       └── data
+├── docker-compose.yml
+└── jira
+    ├── atlassian-agent.jar
+    └── Dockerfile
+
+
+Confluence Dockerfile
+
+FROM cptactionhank/atlassian-confluence:latest
+USER root
+# 将代理破解包加入容器
+COPY "atlassian-agent.jar" /opt/atlassian/confluence/
+
+# 设置启动加载代理包
+RUN echo 'export CATALINA_OPTS="-javaagent:/opt/atlassian/confluence/atlassian-agent.jar ${CATALINA_OPTS}"' >> /opt/atlassian/confluence/bin/setenv.sh
+
+Jira Dockerfile
+
+FROM cptactionhank/atlassian-jira-software:latest
+USER root
+# 将代理破解包加入容器
+COPY "atlassian-agent.jar" /opt/atlassian/jira/
+
+# 设置启动加载代理包
+RUN echo 'export CATALINA_OPTS="-javaagent:/opt/atlassian/jira/atlassian-agent.jar ${CATALINA_OPTS}"' >> /opt/atlassian/jira/bin/setenv.sh
+
+MySQL my.cnf
+
+[mysqld]
+default-storage-engine=INNODB
+character_set_server=utf8mb4
+innodb_default_row_format=DYNAMIC
+innodb_large_prefix=ON
+innodb_file_format=Barracuda
+innodb_log_file_size=2G
+transaction-isolation=READ-COMMITTED
+max_allowed_packet=256M
+
+-------
+CREATE DATABASE confluence CHARACTER SET utf8 COLLATE utf8_bin;
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER,INDEX,REFERENCES on confluence.* TO 'confluence'@'%' IDENTIFIED BY 'xxxxxxxxxxxx';
+flush privileges;
+ 
+CREATE DATABASE jira CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER,INDEX,REFERENCES on jira.* TO 'jira'@'%' IDENTIFIED BY 'xxxxxxxxxxxx';
+flush privileges;
+
+破解
+
+java -jar atlassian-agent.jar -d -m foo@example.com -n xxxx -p conf -o http://127.0.0.1 -s xxxx-xxxx-xxxx-xxxx
+java -jar atlassian-agent.jar -d -m foo@example.com -n xxxx -p jira -o http://127.0.0.1 -s xxxx-xxxx-xxxx-xxxx
+
+插件破解
+
+docker exec mbs_jira java -jar /opt/atlassian/jira/atlassian-agent.jar -p <App Key> -m a@b.com -n a@b.com -o http://127.0.0.1:8080 -s XXXX-XXXX-XXXX-XXXX
+
+docker-compose.yml
+
+version: '3.8'
+services:
+mysql:
+    image: mysql:5.7
+    container_name: mbs_mysql
+    restart: always
+    networks:
+      - mbs-net
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+    volumes:
+      - ./data/mysql/data:/var/lib/mysql/
+      - ./data/mysql/conf.d/:/etc/mysql/conf.d/
+      - ./data/mysql/backup/:/backup/
+jira:
+    build: ./jira
+    container_name: mbs_jira
+    environment:
+      - TZ='Asia/Shanghai'
+    restart: always
+    networks:
+      - mbs-net
+    ports:
+      - '8080:8080'
+    volumes:
+        - ./data/jira/var/:/var/atlassian/jira/
+        - ./data/jira/logs/:/opt/atlassian/jira/logs/
+    depends_on:
+      - mysql
+confluence:
+    build: ./confluence
+    container_name: mbs_confluence
+    environment:
+      - TZ='Asia/Shanghai'
+    restart: always
+    networks:
+      - mbs-net
+    ports:
+      - '8090:8090'
+      - '8091:8091'
+    volumes:
+      - ./data/confluence/var/:/var/atlassian/confluence/
+      - ./data/confluence/logs/:/opt/atlassian/confluence/logs/
+    depends_on:
+      - mysql
+networks:
+  mbs-net:
+    driver: bridge
+
+From <https://www.khow.me/blog/atlassian-confluence-and-jira-useing-docker-compose.html> 
+
+================================
+Version english
+
+Directory Structure
+
+.
+├── confluence
+│   ├── atlassian-agent.jar
+│   └── Dockerfile
+├── data
+│   ├── confluence
+│   │   ├── logs
+└── │ └── var
+├── ├── wait
+│   │   ├── logs
+└── │ └── var
+│   └── mysql
+│       ├── backup
+│       ├── conf.d
+│       │   └── my.cnf
+│       └── data
+├── docker-compose.yml
+└── wait
+    ├── atlassian-agent.jar
+    └── Dockerfile
+
+Confluence Dockerfile
+
+FROM cptactionhank/atlassian-confluence:latest
+USER root
+# Add the proxy crack package to the container
+COPY "atlassian-agent.jar" /opt/atlassian/confluence/
+# Set up the bootloader agent package
+RUN echo 'export CATALINA_OPTS="-javaagent:/opt/atlassian/confluence/atlassian-agent.jar ${CATALINA_OPTS}"' >> /opt/atlassian/confluence/bin/setenv.sh
+
+Wait Dockerfile
+
+FROM cptactionhank/atlassian-jira-software:latest
+USER root
+# Add the proxy crack package to the container
+COPY "atlassian-agent.jar" /opt/atlassian/jira/
+# Set up the bootloader agent package
+RUN echo 'export CATALINA_OPTS="-javaagent:/opt/atlassian/jira/atlassian-agent.jar ${CATALINA_OPTS}"' >> /opt/atlassian/jira/bin/setenv.sh
+
+MySQL my.cnf
+
+[mysqld]
+default-storage-engine=INNODB
+character_set_server=utf8mb4
+innodb_default_row_format=DYNAMIC
+innodb_large_prefix=ON
+innodb_file_format=Barracuda
+innodb_log_file_size=2G
+transaction-isolation=READ-COMMITTED
+max_allowed_packet=256M
+
+-------
+CREATE DATABASE confluence CHARACTER SET utf8 COLLATE utf8_bin;
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER,INDEX,REFERENCES on confluence.* TO 'confluence'@'%' IDENTIFIED BY 'xxxxxxxxxxxx';
+flush privileges;
+ 
+CREATE DATABASE jira CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER,INDEX,REFERENCES on jira.* TO 'jira'@'%' IDENTIFIED BY 'xxxxxxxxxxxx';
+
+crack
+
+java -jar atlassian-agent.jar -d -m foo@example.com -n xxxx -p conf -o http://127.0.0.1 -s xxxx-xxxx-xxxx-xxxx
+java -jar atlassian-agent.jar -d -m foo@example.com -n xxxx -p jira -o http://127.0.0.1 -s xxxx-xxxx-xxxx-xxxx
+
+Plugin crack
+
+docker exec mbs_jira java -jar /opt/atlassian/jira/atlassian-agent.jar -p <App Key> -m a@b.com -n a@b.com -o http://127.0.0.1:8080 -s XXXX-XXXX-XXXX-XXXX
+
+docker-compose.yml
+
+version: '3.8'
+services:
+mysql:
+    image: mysql:5.7
+    container_name: mbs_mysql
+    restart: always
+    networks:
+      - mbs-net
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+    volumes:
+      - ./data/mysql/data:/var/lib/mysql/
+      - ./data/mysql/conf.d/:/etc/mysql/conf.d/
+      - ./data/mysql/backup/:/backup/
+wait:
+    build: ./jira
+    container_name: mbs_jira
+    environment:
+      - TZ='Asia/Shanghai'
+    restart: always
+    networks:
+      - mbs-net
+    ports:
+      - '8080:8080'
+    volumes:
+        - ./data/jira/var/:/var/atlassian/jira/
+        - ./data/jira/logs/:/opt/atlassian/jira/logs/
+    depends_on:
+      - mysql
+confluence:
+    build: ./confluence
+    container_name: mbs_confluence
+    environment:
+      - TZ='Asia/Shanghai'
+    restart: always
+    networks:
+      - mbs-net
+    ports:
+      - '8090:8090'
+      - '8091:8091'
+    volumes:
+      - ./data/confluence/var/:/var/atlassian/confluence/
+      - ./data/confluence/logs/:/opt/atlassian/confluence/logs/
+    depends_on:
+      - mysql
+networks:
+  mbs-net:
+    driver: bridge
+
+From <https://www.khow.me/blog/atlassian-confluence-and-jira-useing-docker-compose.html> 
